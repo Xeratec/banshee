@@ -213,6 +213,8 @@ pub struct Address {
     pub uart: u32,
     pub clint: u32,
     pub cl_clint: u32,
+    pub hwpe_evt: u32,
+    pub hwpe_busy: u32,
 }
 
 impl Default for Address {
@@ -230,6 +232,8 @@ impl Default for Address {
             cl_clint: 0x40000060,
             uart: 0xF00B8000,
             clint: 0xFFFF0000,
+            hwpe_evt: 0xFFFF0000,
+            hwpe_busy: 0xFFFF0000,
         }
     }
 }

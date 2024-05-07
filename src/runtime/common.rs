@@ -43,6 +43,8 @@ pub struct Cpu<'a, 'b> {
     pub clint: &'b Vec<AtomicU32>,
     /// cluster's shared CLINT state
     pub cl_clint: &'b AtomicUsize,
+    pub hwpe_evt : &'b AtomicUsize,
+    pub hwpe_busy : &'b AtomicUsize,
 }
 
 /// A representation of a single CPU core's state.

@@ -55,6 +55,10 @@ pub struct Engine {
     pub num_clusters: usize,
     /// The system configuration.
     pub config: Configuration,
+    /// HWPE Event Signal
+    pub hwpe_evt: AtomicUsize,
+    /// HWPE Busy Signal
+    pub hwpe_busy: AtomicUsize,
     // pub config: Configuration,
     /// The global memory.
     pub memory: Mutex<HashMap<u64, u32>>,
@@ -88,6 +92,8 @@ impl Engine {
             num_cores: 1,
             num_clusters: 1,
             config: Default::default(),
+            hwpe_evt: Default::default(),
+            hwpe_busy: Default::default(),
             memory: Default::default(),
             putchar_buffer: Default::default(),
             peripherals: Peripherals::new(),
@@ -448,6 +454,8 @@ impl Engine {
                     &wakeup_state,
                     &clint,
                     &cl_clints[j],
+                    &self.hwpe_evt,
+                    &self.hwpe_busy,
                 )
             })
             .collect();
@@ -692,6 +700,8 @@ impl<'a, 'b> Cpu<'a, 'b> {
         wakeup_state: &'b Mutex<WakeupState>,
         clint: &'b Vec<AtomicU32>,
         cl_clint: &'b AtomicUsize,
+        hwpe_evt: &'b AtomicUsize,
+        hwpe_busy: &'b AtomicUsize,
     ) -> Self {
         Self {
             engine,
@@ -710,6 +720,8 @@ impl<'a, 'b> Cpu<'a, 'b> {
             wakeup_state,
             clint,
             cl_clint,
+            hwpe_evt,
+            hwpe_busy,
         }
     }
 
@@ -829,6 +841,16 @@ impl<'a, 'b> Cpu<'a, 'b> {
             {
                 0
             }
+            x if x >= self.engine.config.address.hwpe_evt
+                && x < self.engine.config.address.hwpe_evt + 0x8 =>
+            {
+                self.engine.hwpe_evt.load(Ordering::SeqCst) as u32
+            }
+            x if x >= self.engine.config.address.hwpe_busy
+                && x < self.engine.config.address.hwpe_busy + 0x8 =>
+            {
+                self.engine.hwpe_busy.load(Ordering::SeqCst) as u32
+            }
             // DRAM
             _ => {
                 // Map all remaining addresses to the hash map but throw a warning if we read outside the memory map
@@ -887,6 +909,8 @@ impl<'a, 'b> Cpu<'a, 'b> {
                     buffer.push(value as u8);
                 }
             }
+            x if x == self.engine.config.address.hwpe_evt => (), // hwpe_evt
+            x if x == self.engine.config.address.hwpe_busy => (), // hwpe_busy
             // TCDM
             // TODO: this is *not* thread-safe and *will* lead to undefined behavior on simultaneous access
             // by 2 harts. However, changing `tcdm_ptr` to a locked structure would require pervasive redesign.
